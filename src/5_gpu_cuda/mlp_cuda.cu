@@ -4,7 +4,7 @@
 #include <cuda_runtime.h>
 #include "mlp_cuda.h"
 
-// === KERNELS (Se ejecutan en la GPU) ===
+// === KERNELS ===
 
 // Multiplicación de Matrices: C = A * B
 // A(m, n), B(n, k) -> C(m, k)
@@ -29,7 +29,7 @@ __global__ void bias_relu_kernel(float* Z, float* b, float* A, int rows, int col
 
     if (row < rows && col < cols) {
         int idx = row * cols + col;
-        // El bias se suma por fila (cada neurona tiene un bias)
+        // El bias se suma por fila
         // b tiene tamaño (rows). Z es (rows x cols)
         float val = Z[idx] + b[row];
         Z[idx] = val; // Guardamos el valor pre-activación
@@ -77,7 +77,7 @@ void mlp_init(MLPCuda* net, int in, int hidden, int out, float lr) {
     float *h_W1 = (float*)malloc(size_w1);
     float *h_W2 = (float*)malloc(size_w2);
     
-    // Inicialización simple (He init simplificado)
+    // Inicialización simple
     for(int i=0; i<in*hidden; i++) h_W1[i] = ((float)rand()/RAND_MAX - 0.5f) * 0.1f;
     for(int i=0; i<hidden*out; i++) h_W2[i] = ((float)rand()/RAND_MAX - 0.5f) * 0.1f;
 
@@ -115,7 +115,6 @@ void mlp_train(MLPCuda* net, float* h_X, float* h_Y, int num_samples, int epochs
     CUDA_CHECK(cudaMalloc(&net->d_A1, net->hidden_size * batch_size * sizeof(float)));
     CUDA_CHECK(cudaMalloc(&net->d_Z2, net->output_size * batch_size * sizeof(float)));
     // Salida final en GPU
-    // No necesitamos A2 explícito si no calculamos loss en GPU para este demo
 
     // Configuración de Grid/Block
     dim3 block(16, 16);
@@ -132,14 +131,6 @@ void mlp_train(MLPCuda* net, float* h_X, float* h_Y, int num_samples, int epochs
             int current_batch = (i + batch_size > num_samples) ? (num_samples - i) : batch_size;
             
             // 1. Copiar Batch CPU -> GPU (Cuello de botella PCIe)
-            // Nota: Copiamos transpuesto o normal? Asumimos normal y transponemos W
-            // X Batch debe ser (784 x 64). h_X es (N x 784).
-            // Para simplificar, copiamos fila por fila a un buffer lineal
-            // Lo ideal es tener X ya transpuesto en CPU. Asumiremos eso para velocidad.
-            
-            // Truco: Copiamos el bloque de memoria continuo y lo tratamos como (Input x Batch)
-            // Requiere que h_X en CPU esté organizado como (Features x Samples).
-            // Asumiremos que el main lo pasa así.
             CUDA_CHECK(cudaMemcpy(d_X_batch, &h_X[i * net->input_size], 
                                   net->input_size * current_batch * sizeof(float), 
                                   cudaMemcpyHostToDevice));
@@ -169,12 +160,8 @@ void mlp_train(MLPCuda* net, float* h_X, float* h_Y, int num_samples, int epochs
             
             // 6. Bias Salida (Linear)
             bias_linear_kernel<<<grid_mul2, block>>>(net->d_Z2, net->d_b2,
-                                                     net->output_size, current_batch);
-            
-            // Sincronizar para asegurar que GPU terminó este batch (opcional, reduce performance)
-            // cudaDeviceSynchronize();
+                                                     net->output_size, current_batch);    
         }
-        // printf("Epoch GPU %d\n", epoch+1);
     }
     
     cudaEventRecord(stop);

@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#include <omp.h> // <--- LIBRERÍA OPENMP
+#include <omp.h>
 #include "mlp.h"
 
 float rand_weight_omp() { return ((float)rand() / RAND_MAX - 0.5f) * 0.1f; }
@@ -25,7 +25,7 @@ void mlp_init(MLP* net, int in, int hidden, int out, float lr) {
     net->Z2 = NULL; net->A2 = NULL;
 }
 
-// === PARALELISMO AQUÍ ===
+// === PARALELISMO ===
 void mat_mul(float* A, float* B, float* C, int m, int n, int p) {
     memset(C, 0, m * p * sizeof(float));
     
@@ -84,7 +84,7 @@ void mlp_forward(MLP* net, float* X, int batch_size) {
     mat_mul(W2_T, net->A1, net->Z2, net->output_size, net->hidden_size, batch_size);
     free(W2_T);
     
-    // Softmax - Paralelizamos por ejemplo (columna j)
+    // Softmax - Paralelizamos por ejemplo la columna j
     #pragma omp parallel for
     for (int j = 0; j < batch_size; j++) {
         float max_val = -1e9;
@@ -125,7 +125,7 @@ void mlp_backward(MLP* net, float* X, float* Y, int batch_size) {
     mat_mul(net->A1, dZ2_T, dW2, net->hidden_size, batch_size, net->output_size);
     free(dZ2_T);
     
-    // db2 - Suma por filas. Paralelizamos el bucle externo (neuronas)
+    // db2 - Suma por filas. Paralelizamos el bucle externo
     float* db2 = calloc(net->output_size, sizeof(float));
     #pragma omp parallel for
     for (int i = 0; i < net->output_size; i++) {

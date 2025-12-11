@@ -2,7 +2,7 @@ import numpy as np
 import time
 from multiprocessing import Pool, cpu_count
 
-# Funciones auxiliares fuera de la clase para que multiprocessing no se queje
+# Funciones auxiliares fuera de la clase para que multiprocessing no llore
 def relu(Z):
     return np.maximum(0, Z)
 
@@ -12,7 +12,7 @@ def softmax(Z):
 
 def compute_gradients(args):
     """
-    Esta función es la que ejecuta cada núcleo (Proceso).
+    Esta función es la que ejecuta cada núcleo.
     Recibe: (Pesos, X_chunk, Y_chunk)
     Devuelve: (dW1, db1, dW2, db2)
     """

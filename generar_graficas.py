@@ -1,113 +1,134 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-# --- DATOS REALES DEL PROYECTO ---
-# Tiempos normalizados a 10 Epochs
-# Nota: Python MP tardó 858s en 5 epochs -> Proyectamos 1716s para 10 epochs
-datos = {
+# DATOS REALES (Extraídos de tus logs)
+
+# 1. Tiempos Totales (10 Epochs)
+tiempos_total = {
+    'Python MP': 1716.08,
     'C Secuencial': 391.83,
-    'OpenMP (8 Hilos)': 229.92,
-    'Python (NumPy)': 99.56,
-    'Python MP (10 Ep*)': 1716.08,
-    'GPU (CUDA)': 0.63
+    'OpenMP (1 hilo)': 407.88, # Más lento por overhead
+    'OpenMP (4 hilos)': 203.50, # Tu mejor tiempo CPU
+    'Python NumPy': 99.56,
+    'GPU CUDA': 0.63
 }
 
-# Configuración de estilo
-plt.style.use('default') # Estilo limpio
+# 2. Datos para Ley de Amdahl (OpenMP)
+# Usamos C Secuencial (391.83) como base de comparación
+hilos_lista = [1, 2, 4, 8]
+tiempos_omp = [407.88, 271.21, 203.50, 208.14]
 
-# ==========================================
-# GRÁFICA 1: COMPARATIVA TOTAL DE TIEMPOS
-# ==========================================
-def plot_total_times():
-    nombres = list(datos.keys())
-    valores = list(datos.values())
+# 3. Datos Profiling CUDA (Batch 512 - El eficiente)
+# CPU->GPU: 0.562 ms, Kernel: 7.425 ms, GPU->CPU: 0.794 ms
+profiling_labels = ['H2D (CPU->GPU)', 'Kernel (Cómputo)', 'D2H (GPU->CPU)']
+profiling_data = [0.562, 7.425, 0.794]
+
+# 4. Datos Batch Size (Tiempo por Epoch)
+batch_labels = ['Batch 16 (Pequeño)', 'Batch 512 (Grande)']
+batch_times = [30.79, 1.03]
+
+# Configuración general de estilo
+plt.rcParams.update({'font.size': 12})
+
+# GRÁFICA 1: Comparativa General
+def graph_comparativa():
+    nombres = list(tiempos_total.keys())
+    valores = list(tiempos_total.values())
     
-    # Colores semánticos:
-    # Rojo=Lento, Amarillo=Medio, Verde=Rápido, Azul=Base C
-    colores = ['#7f8c8d', '#e67e22', '#f1c40f', '#c0392b', '#2ecc71'] 
-
-    fig, ax = plt.subplots(figsize=(12, 7))
-    barras = ax.bar(nombres, valores, color=colores, edgecolor='black', alpha=0.9)
-
-    # ESCALA LOGARÍTMICA: Fundamental para ver la barra de CUDA
-    ax.set_yscale('log')
+    # Colores: Rojo (Lento) -> Verde (Rápido)
+    colores = ['#c0392b', '#d35400', '#e67e22', '#f39c12', '#2980b9', '#27ae60']
     
-    # Títulos y Etiquetas
-    ax.set_title('Tiempo de Entrenamiento por Implementación (10 Epochs)', fontsize=16, fontweight='bold', pad=20)
-    ax.set_ylabel('Tiempo (Segundos) - Escala Logarítmica', fontsize=12)
-    ax.set_xlabel('Implementación', fontsize=12)
+    plt.figure(figsize=(12, 7))
+    bars = plt.bar(nombres, valores, color=colores, edgecolor='black')
     
-    # Grid suave
-    ax.grid(axis='y', linestyle='--', alpha=0.5, which='major')
-
-    # Poner el valor exacto encima de cada barra
-    for barra in barras:
-        height = barra.get_height()
-        ax.text(barra.get_x() + barra.get_width()/2., height * 1.1,
-                f'{height:.2f}s',
-                ha='center', va='bottom', fontsize=11, fontweight='bold')
-
-    # Anotación especial para CUDA
-    speedup_cuda = datos['C Secuencial'] / datos['GPU (CUDA)']
-    ax.annotate(f'¡Speedup {speedup_cuda:.0f}x!', 
-                xy=(4, 0.63), xytext=(3, 3),
-                arrowprops=dict(facecolor='black', shrink=0.05),
-                fontsize=12, color='green', fontweight='bold')
+    plt.yscale('log') # ESCALA LOGARÍTMICA
+    plt.title('Tiempo Total de Entrenamiento (10 Epochs) - Escala Logarítmica', fontweight='bold')
+    plt.ylabel('Tiempo (Segundos)')
+    plt.grid(axis='y', linestyle='--', alpha=0.5)
+    
+    # Etiquetas
+    for bar in bars:
+        yval = bar.get_height()
+        plt.text(bar.get_x() + bar.get_width()/2, yval * 1.1, f'{yval:.2f}s', 
+                 ha='center', va='bottom', fontsize=10, fontweight='bold')
+    
+    # Flecha de CUDA
+    plt.annotate('¡GPU: 0.63s!', xy=(5, 0.63), xytext=(4, 10),
+                 arrowprops=dict(facecolor='black', shrink=0.05), fontsize=12, color='green', fontweight='bold')
 
     plt.tight_layout()
-    plt.savefig('grafica_comparativa_log.png', dpi=300)
-    print(">> Generada: grafica_comparativa_log.png")
-    plt.show()
+    plt.savefig('1_comparativa_tiempos.png', dpi=300)
+    print("Generada: 1_comparativa_tiempos.png")
 
-# ==========================================
-# GRÁFICA 2: SPEEDUP OPENMP (LEY DE AMDAHL)
-# ==========================================
-def plot_speedup():
-    # Datos: 1 Hilo (Base) vs 8 Hilos (Tu ejecución)
-    hilos = [1, 8]
+# GRÁFICA 2: Speedup OpenMP y Amdahl
+def graph_amdahl():
+    # Calculamos Speedup: Tiempo Base (C Seq) / Tiempo Paralelo
+    base = 391.83
+    speedups = [base / t for t in tiempos_omp]
     
-    t_seq = 391.83
-    t_omp = 229.92
+    plt.figure(figsize=(10, 6))
     
-    speedup_real = t_seq / t_omp # 1.70x
-    speedups = [1.0, speedup_real]
-    
-    # Ideal teórico (Lineal)
-    ideal = [1.0, 8.0]
-
-    fig, ax = plt.subplots(figsize=(10, 6))
-    
-    # Línea Ideal
-    ax.plot(hilos, ideal, 'k--', label='Speedup Ideal (Lineal)', alpha=0.5)
+    # Línea Ideal (Lineal)
+    plt.plot(hilos_lista, hilos_lista, 'k--', label='Speedup Ideal', alpha=0.5)
     
     # Línea Real
-    ax.plot(hilos, speedups, 'o-', color='#e67e22', linewidth=3, markersize=10, label='Speedup Real (OpenMP)')
+    plt.plot(hilos_lista, speedups, 'o-', color='#e74c3c', linewidth=3, markersize=8, label='Speedup Real')
     
-    # Rellenar el área de "Pérdida por Eficiencia"
-    ax.fill_between(hilos, speedups, ideal, color='gray', alpha=0.1, label='Pérdida (Overhead/Amdahl)')
-
-    # Etiquetas
-    ax.set_title('Análisis de Escalabilidad OpenMP (8 Hilos)', fontsize=16, fontweight='bold', pad=20)
-    ax.set_xlabel('Número de Hilos de CPU', fontsize=12)
-    ax.set_ylabel('Speedup (Veces más rápido)', fontsize=12)
-    ax.legend(loc='upper left', fontsize=11)
-    ax.grid(True, linestyle='--', alpha=0.6)
+    plt.title('Análisis de Escalabilidad OpenMP (Ley de Amdahl)', fontweight='bold')
+    plt.xlabel('Número de Hilos')
+    plt.ylabel('Speedup (x veces más rápido)')
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.legend()
     
-    # Límites
-    ax.set_ylim(0, 9)
-    ax.set_xlim(0, 9)
-
-    # Anotación del valor
-    ax.annotate(f'{speedup_real:.2f}x', 
-                 xy=(8, speedup_real), xytext=(6, speedup_real + 1),
-                 arrowprops=dict(facecolor='#e67e22', shrink=0.05),
-                 fontsize=14, fontweight='bold', color='#e67e22')
+    # Anotaciones
+    for x, y in zip(hilos_lista, speedups):
+        plt.text(x, y + 0.2, f'{y:.2f}x', ha='center', color='#c0392b', fontweight='bold')
 
     plt.tight_layout()
-    plt.savefig('grafica_speedup_amdahl.png', dpi=300)
-    print(">> Generada: grafica_speedup_amdahl.png")
-    plt.show()
+    plt.savefig('2_speedup_amdahl.png', dpi=300)
+    print("Generada: 2_speedup_amdahl.png")
 
+# GRÁFICA 3: Profiling CUDA
+def graph_profiling():
+    # Gráfico de Pastel (Pie Chart)
+    plt.figure(figsize=(8, 6))
+    colors = ['#3498db', '#2ecc71', '#9b59b6']
+    explode = (0.1, 0, 0.1)  # Separar las transferencias
+    
+    plt.pie(profiling_data, labels=profiling_labels, autopct='%1.1f%%', startangle=140, 
+            colors=colors, explode=explode, shadow=True)
+    
+    plt.title('Desglose de Tiempo en GPU (Batch 512)', fontweight='bold')
+    
+    plt.tight_layout()
+    plt.savefig('3_profiling_cuda.png', dpi=300)
+    print("Generada: 3_profiling_cuda.png")
+
+# GRÁFICA 4: Análisis Batch Size
+def graph_batch():
+    plt.figure(figsize=(8, 6))
+    colors = ['#e74c3c', '#27ae60'] # Rojo malo, Verde bueno
+    
+    bars = plt.bar(batch_labels, batch_times, color=colors, edgecolor='black', width=0.6)
+    
+    plt.title('Impacto del Batch Size (Tiempo por Epoch)', fontweight='bold')
+    plt.ylabel('Segundos (Menor es mejor)')
+    
+    for bar in bars:
+        yval = bar.get_height()
+        plt.text(bar.get_x() + bar.get_width()/2, yval + 0.5, f'{yval:.2f}s', 
+                 ha='center', va='bottom', fontsize=12, fontweight='bold')
+        
+    plt.annotate('30x más rápido', xy=(1, 1.03), xytext=(0.5, 15),
+                 arrowprops=dict(facecolor='black', shrink=0.05), fontsize=12)
+
+    plt.tight_layout()
+    plt.savefig('4_batch_size_impact.png', dpi=300)
+    print("Generada: 4_batch_size_impact.png")
+
+# Ejecutar todo
 if __name__ == "__main__":
-    plot_total_times()
-    plot_speedup()
+    graph_comparativa()
+    graph_amdahl()
+    graph_profiling()
+    graph_batch()

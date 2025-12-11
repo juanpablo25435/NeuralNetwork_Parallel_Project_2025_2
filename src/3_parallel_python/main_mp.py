@@ -27,9 +27,9 @@ def one_hot_encode(y, classes=10):
     return np.eye(classes)[y].T
 
 def main():
-    print("--- Escenario 2a: Python Multiprocessing ---")
+    print("Escenario 2a: Python Multiprocessing")
     num_cpus = cpu_count()
-    print(f">>> Usando Pool de {num_cpus} procesos <<<")
+    print(f"Usando Pool de {num_cpus} procesos")
     
     # Cargar datos
     try:
@@ -45,7 +45,7 @@ def main():
     EPOCHS = 5  # Reducimos a 5 epochs porque MP en Windows tiene mucho overhead de inicio
     BATCH_SIZE = 64
     
-    print(f"Iniciando entrenamiento ({EPOCHS} epochs)...")
+    print(f"Iniciando entrenamiento ({EPOCHS} epocas)...")
     start_time = time.time()
     
     # Crear el Pool de procesos UNA VEZ
@@ -54,11 +54,10 @@ def main():
         for epoch in range(EPOCHS):
             epoch_start = time.time()
             mlp.train_epoch_parallel(pool, X_train, Y_train_enc, BATCH_SIZE)
-            print(f"Epoch {epoch+1} terminada en {time.time() - epoch_start:.2f}s")
+            print(f"Epoca {epoch+1} terminada en {time.time() - epoch_start:.2f}s")
             
     total_time = time.time() - start_time
-    print(f"\n>>> Tiempo Total (Python MP): {total_time:.2f} segundos <<<")
-    print("(Nota: Compara esto con el Baseline Python Secuencial)")
+    print(f"\nTiempo Total en Python MP: {total_time:.2f} segundos")
 
 if __name__ == '__main__':
     main()

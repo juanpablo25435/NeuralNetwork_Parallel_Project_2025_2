@@ -41,7 +41,7 @@ int main() {
         for (int i = 0; i < num_train; i += BATCH_SIZE) {
             int current_batch = (i + BATCH_SIZE > num_train) ? (num_train - i) : BATCH_SIZE;
             
-            // Preparar Batch (Transponer al vuelo: Imagenes son filas en raw, columnas en red)
+            // Preparar Batch
             // X_train[img][pixel] -> X_batch[pixel][img]
             memset(Y_batch_enc, 0, 10 * BATCH_SIZE * sizeof(float));
             

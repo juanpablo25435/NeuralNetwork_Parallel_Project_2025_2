@@ -56,7 +56,6 @@ void mlp_forward(MLP* net, float* X, int batch_size) {
     // X entra como (Input x Batch)
     
     // Reservar memoria temporal si cambia el batch_size
-    // (Simplificación: reallocamos siempre o chequeamos null)
     if (!net->Z1) {
         net->Z1 = malloc(net->hidden_size * batch_size * sizeof(float));
         net->A1 = malloc(net->hidden_size * batch_size * sizeof(float));

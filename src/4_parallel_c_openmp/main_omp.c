@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
-#include <omp.h> // Para imprimir número de hilos
+#include <omp.h>
 #include "../common/mnist_loader.h"
 #include "mlp.h"
 
@@ -41,7 +41,7 @@ int main() {
         for (int i = 0; i < num_train; i += BATCH_SIZE) {
             int current_batch = (i + BATCH_SIZE > num_train) ? (num_train - i) : BATCH_SIZE;
             
-            // Preparar Batch (Paralelizable también)
+            // Preparar Batch
             memset(Y_batch_enc, 0, 10 * BATCH_SIZE * sizeof(float));
             
             #pragma omp parallel for

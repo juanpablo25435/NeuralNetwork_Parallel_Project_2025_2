@@ -14,7 +14,7 @@ def load_images(filename):
         f.read(16) # Skip headers
         buffer = f.read()
         data = np.frombuffer(buffer, dtype=np.uint8).astype(np.float32)
-        # Normalizar [0, 1] y aplanar a (N, 784) [cite: 23]
+        # Normalizar [0, 1] y aplanar a (N, 784)
         return data.reshape(-1, 784) / 255.0
 
 def load_labels(filename):
@@ -58,12 +58,12 @@ def main():
     
     print(f"Datos Cargados. X_train: {X_train.shape}, Y_train: {Y_train_enc.shape}")
     
-    # 2. Configuración [cite: 24-26]
+    # 2. Configuración
     INPUT_SIZE = 784
-    HIDDEN_SIZE = 512 # Recomendado entre 256 y 1024 [cite: 26]
+    HIDDEN_SIZE = 512 # Recomendado entre 256 y 1024
     OUTPUT_SIZE = 10
     LEARNING_RATE = 0.1
-    EPOCHS = 10      # [cite: 101]
+    EPOCHS = 10
     BATCH_SIZE = 64
     
     mlp = MLP(INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE, LEARNING_RATE)
@@ -89,7 +89,7 @@ def main():
             mlp.forward(X_batch)
             mlp.backward(X_batch, Y_batch)
         
-        # Calcular Loss y Accuracy al final de la época (opcional, consume tiempo)
+        # Calcular Loss y Accuracy al final de la época (consume tiempo)
         # Hacemos un forward sobre una muestra pequeña para monitorear rápido
         sample_out = mlp.forward(X_train[:, :1000])
         acc = get_accuracy(sample_out, Y_train_enc[:, :1000])

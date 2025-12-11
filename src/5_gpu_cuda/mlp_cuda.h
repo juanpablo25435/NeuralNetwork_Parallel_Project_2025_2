@@ -3,7 +3,7 @@
 
 #include <cuda_runtime.h>
 
-// Macro para chequear errores de CUDA (Buenas prácticas)
+// Macro para chequear errores de CUDA
 #define CUDA_CHECK(call) \
     do { \
         cudaError_t err = call; \
